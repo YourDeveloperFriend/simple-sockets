@@ -1,0 +1,10 @@
+{
+  "name": "simple-sockets",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "lodash": "^4.16.6",
+    "ws": "^1.1.1"
+  }
+}
