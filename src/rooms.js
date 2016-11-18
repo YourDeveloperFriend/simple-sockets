@@ -14,7 +14,7 @@ class RoomManager {
   connect({pubClient, subClient}) {
     this.pubClient = pubClient;
     this.subClient = subClient;
-    subClient.on('message', (channel, message)=> {
+    subClient.on('message', this._onMessage = (channel, message)=> {
       if(channel.startsWith(this.channelPrefix)) {
         const room = channel.substring(this.channelPrefix.length);
         const payload = JSON.parse(message);
@@ -23,6 +23,11 @@ class RoomManager {
         }
       }
     });
+  }
+  disconnect() {
+    if(this.subClient) {
+      this.subClient.removeEventListener('message', this._onMessage);
+    }
   }
   emitTo(room, eventName, data) {
     this.emitToMe(room, eventName, data);

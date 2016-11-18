@@ -31,7 +31,7 @@ class PresenceManager extends EventEmitter {
       subClient.subscribe(fullUpdateLoadResponse);
       const requestFullUpdate = 'numPresent-request-full-update-' + this.clientId;
       subClient.subscribe(requestFullUpdate);
-      subClient.on('message', (channel, message)=> {
+      subClient.on('message', this._onMessage = (channel, message)=> {
         try {
           message = JSON.parse(message);
         } catch (e) {
@@ -122,6 +122,10 @@ class PresenceManager extends EventEmitter {
     this._notifyMe(room);
   }
   disconnect() {
+    this.disconnected = true;
+    if(this.subClient) {
+      this.subClient.removeEventListener('message', this._onMessage);
+    }
     return this._publish('numPresent-stop');
   }
   createPresense(socket, room) {
@@ -163,12 +167,12 @@ class PresenceManager extends EventEmitter {
     }
   }
   onNumPresent(room, cb, init = false) {
-    this.on(room, cb);
+    this.on('numPresent-key-' + room, cb);
     if(init) {
       cb(this.allNumPresent.get(room) || 0);
     }
-    return function off() {
-      this.off(room, cb);
+    return ()=> {
+      this.removeListener('numPresent-key-' + room, cb);
     };
   }
   _notifyNumPresent(room) {
@@ -177,22 +181,26 @@ class PresenceManager extends EventEmitter {
   }
   @batchify
   _notifyMe(rooms) {
-    rooms = _.uniq(rooms);
-    rooms.forEach(room=> {
-      const numPresent = this.allNumPresent.get(room);
-      this.emit(room, numPresent);
-    });
+    if(!this.disconnected) {
+      rooms = _.uniq(rooms);
+      rooms.forEach(room=> {
+        const numPresent = this.allNumPresent.get(room);
+        this.emit('numPresent-key-' + room, numPresent);
+      });
+    }
   }
   @batchify
   _notifyOthers(rooms) {
-    rooms = _(rooms)
-    .uniq()
-    .invert()
-    .mapValues((a, room)=> _.get(this.myNumPresent.get(room), 'size', 0))
-    .value();
-    this._publish('numPresent-update', {
-      rooms,
-    });
+    if(!this.disconnected) {
+      rooms = _(rooms)
+      .uniq()
+      .invert()
+      .mapValues((a, room)=> _.get(this.myNumPresent.get(room), 'size', 0))
+      .value();
+      this._publish('numPresent-update', {
+        rooms,
+      });
+    }
   }
   @batchify.withTimeout(50)
   _publishFullUpdate(clientIds) {

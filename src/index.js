@@ -32,6 +32,7 @@ class SimpleSockets {
     }
   }
   disconnect() {
+    this.rooms.disconnect();
     if(this.presense) {
       this.presense.disconnect();
     }
@@ -47,7 +48,7 @@ class SimpleSockets {
     }
   }
   emitTo(room, eventName, payload) {
-    this.rooms.emitTo(room, eventName, data);
+    this.rooms.emitTo(room, eventName, payload);
   }
   use(fn) {
     this.middleware.push(fn);
@@ -62,7 +63,6 @@ class SimpleSockets {
     socket[ORIG_EMIT] = socket.emit;
     socket[numPresentSubscriptions] = {};
     socket.emit = (channel, data)=> {
-      console.log('attempting to emit', channel);
       if(['close', 'error', 'message'].includes(channel)) {
         socket[ORIG_EMIT](channel, data);
       } else {
@@ -92,13 +92,18 @@ class SimpleSockets {
     };
     socket.subscribeToNumPresent = (room, key = room)=> {
       if(this.presense) {
+        const location = `${room}.${key}`;
+        if(_.get(socket[numPresentSubscriptions], location)) {
+          throw new Error('Attempted to subscribe to the same room twice!');
+        }
         const off = this.presense.onNumPresent(room, numPresent=> {
           emit(socket, key, numPresent);
         }, true);
-        _.get(socket[numPresentSubscriptions], `${room}.${key}`, off);
+        _.set(socket[numPresentSubscriptions], location, off);
       }
     };
     socket.unsubscribeToNumPresent = (room, key = room)=> {
+      socket[numPresentSubscriptions][room][key]();
       delete socket[numPresentSubscriptions][room][key];
       if(_.keys(socket[numPresentSubscriptions][room]).length === 0) {
         delete socket[numPresentSubscriptions][room];
