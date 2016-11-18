@@ -19,26 +19,27 @@ class RoomManager {
         const room = channel.substring(this.channelPrefix.length);
         const payload = JSON.parse(message);
         if(payload.clientId !== this.clientId) {
-          this.emitToMe(room, payload.data);
+          this.emitToMe(room, payload.eventName, payload.data);
         }
       }
     });
   }
   emitTo(room, eventName, data) {
-    emitToMe(room, data);
-    emitToOthers(room, data);
+    this.emitToMe(room, eventName, data);
+    this.emitToOthers(room, eventName, data);
   }
-  emitToMe(room, data) {
-    if(rooms.has(room)) {
-      for(let socket of rooms.get(room)) {
-        emit(socket, room, data);
+  emitToMe(room, eventName, data) {
+    if(this.rooms.has(room)) {
+      for(let socket of this.rooms.get(room)) {
+        emit(socket, eventName, data);
       }
     }
   }
-  emitToOthers(room, data) {
+  emitToOthers(room, eventName, data) {
     if(!this.pubClient) return;
-    this.pubClient.publishAsync(this.channelPrefix + room, JSON.stringify({
-      clientId,
+    this.pubClient.publish(this.channelPrefix + room, JSON.stringify({
+      clientId: this.clientId,
+      eventName,
       data,
     }));
   }
@@ -74,12 +75,12 @@ class RoomManager {
   }
   startListening(room) {
     if(!this.subClient) return;
-    this.subClient.subscribe(channelPrefix + room);
+    this.subClient.subscribe(this.channelPrefix + room);
   }
 
   stopListening(room) {
     if(!this.subClient) return;
-    this.subClient.unsubscribe(channelPrefix + room);
+    this.subClient.unsubscribe(this.channelPrefix + room);
   }
 }
 

@@ -1,6 +1,7 @@
-
-/lib
+/src
 /node_modules
+/test-utils
 *.swo
 *.swp
 npm-debug.log
+
