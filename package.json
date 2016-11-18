@@ -19,5 +19,6 @@
     "babel-core": "5",
     "should": "^11.1.1",
     "sinon": "^1.17.6"
-  }
+  },
+  "repository": "YourDeveloperFriend/simple-sockets"
 }
